@@ -1,5 +1,15 @@
 ## Datei Biber-Daten-Long.anonym.csv erstellen/aktualisieren
 
+Dieses Repository clonen
+
+```bash
+git clone --depth 1 https://github.com/zero-overhead/informatik-biber
+cd informatik-biber/Data-Science
+tree
+```
+
+und anschliessend die Rohdaten vorbereiten
+
 - Resultate als Excel-Datei von https://wettbewerb.informatik-biber.ch/admin/ herunterladen und im Ordner `Resultate` speichern
 - Excel-Datei öffnen und alle Datensätze ohne Klasse entfernen (das sind nur "Tests") und die Excel-Datei wieder speichern
 - danach alle Blätter der Excel-Datei mittels `Speichern unter` als  `CSV UTF-8`-Datei einzeln exportieren. Der Dateiname muss auf `_Einzel.csv` bzw. `_Gruppe.csv` enden.  Beispiel-Schema: `CH_KSZO_Wettbewerb_2024_Resultate_Einzel.csv`
@@ -13,8 +23,9 @@ cd informatik-biber/Data-Science
 raku Tools/biber-preprocess.raku --input-dir=Resultate --output-file=Daten/Biber-Daten-Long.csv
 ```
 
-Die Besipieldaten sollten diesen Output geben
-```
+Die Beispieldaten sollten diesen Output geben
+
+```bash
 Processing Resultate/CH_BZAA_Wettbewerb_2025_Resultate_Einzel.csv
 2 rows
 Processing Resultate/CH_KSXX_Wettbewerb_2021_Resultate_7-8_Einzel.csv
@@ -24,27 +35,22 @@ Processing Resultate/CH_KSYY_Wettbewerb_2025_Resultate_Gruppe.csv
 Writing 119 rows to Daten/Biber-Daten-Long.anonym.csv
 ```
 
-Diese Datei `Biber-Daten-Long.anonym.csv` enthält nur noch anonymisierte Daten in Bezug auf Schule, Klasse und Schülernamen.
+Die Datei `Biber-Daten-Long.anonym.csv` enthält nur noch anonymisierte Daten in Bezug auf Schule, Klasse und Schülernamen.
 
-**Wichtig:** Beim Hochladen der Lernenden-Daten am Anfang des Biber-Jahres auf https://wettbewerb.informatik-biber.ch/admin/ für jeden Schüler über mehrere Jahre immer den gleichen Benutzernamen und die gleiche Klasse verwenden. Nur dann ist jeder Lernende mit Land+Schule+Klasse+Name über mehrer Jahre identifizierbar und trotzdem anonym. Die Leistung einzelner SuS kann nur dann über mehrere Jahre nachverfolgt werden.
+**Wichtig:** Beim Hochladen der Lernenden-Daten am Anfang des Biber-Jahres auf https://wettbewerb.informatik-biber.ch/admin/ für jeden Schüler über mehrere Jahre immer den gleichen Benutzernamen und die gleiche Klasse verwenden. Nur dann ist jeder Lernende mit Land+Schule+Klasse+Name über mehrere Jahre eindeutig identifizierbar und trotzdem anonym. Die Leistung einzelner SuS kann dann über mehrere Jahre nachverfolgt und anonym analysiert werden.
 
-Beispiel: für Susi Meier wird in jedem Jahr der gleiche Benutzername und gleiche Klasse für den [Wettbewerb](https://wettbewerb.informatik-biber.ch/index.php?action=login)  verwendet.
+Beispiel: für Susi Meier wird in jedem Jahr der gleiche Benutzername und die gleiche Klasse für den [Wettbewerb](https://wettbewerb.informatik-biber.ch/index.php?action=login) verwendet.
+
 - Benutzername: susi.meier@student.schule.ch
 - Klasse: G24b
 
 
 ## Raku
 
-Installieren: https://raku.org/
+Installieren nach Anleitung: https://raku.org/install
 
-Package installieren:
+Anschliessend Package installieren:
 
 ```bash
 zef install Text::CSV:ver<0.022>:auth<zef:Tux>
 ```
-
-Dieses Repository clonen:
-```bash
-git clone --depth 1 https://github.com/zero-overhead/informatik-biber
-```
-
