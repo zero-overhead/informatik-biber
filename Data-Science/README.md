@@ -1,10 +1,19 @@
 ## Datei Biber-Daten-Long.anonym.csv erstellen/aktualisieren
 
-Dieses Repository clonen
+Dieses Repository einmalig clonen
 
 ```bash
 git clone --depth 1 https://github.com/zero-overhead/informatik-biber
 cd informatik-biber/Data-Science
+tree
+```
+
+oder updaten
+
+```bash
+cd informatik-biber
+git pull
+cd Data-Science
 tree
 ```
 
@@ -19,7 +28,6 @@ und anschliessend die Rohdaten vorbereiten
 Abschliessend die Datei `Biber-Daten-Long.anonym.csv` neu erstellen durch Aufruf von:
 
 ```bash
-cd informatik-biber/Data-Science
 raku Tools/biber-preprocess.raku --input-dir=Resultate --output-file=Daten/Biber-Daten-Long.csv
 ```
 
