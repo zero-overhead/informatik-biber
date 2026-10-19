@@ -28,7 +28,13 @@ und anschliessend die Rohdaten vorbereiten
 Abschliessend die Datei `Biber-Daten-Long.anonym.csv` neu erstellen durch Aufruf von:
 
 ```bash
-raku Tools/biber-preprocess.raku --input-dir=Resultate --output-file=Daten/Biber-Daten-Long.csv
+raku Tools/biber-preprocess.raku --input-dir=Resultate
+```
+
+oder mit optionalen Parametern
+
+```bash
+raku Tools/biber-preprocess.raku --input-dir=Resultate --input-csv-sep=";" --output-file=Daten/Biber-Daten-Long.csv
 ```
 
 Die Beispieldaten sollten diesen Output geben

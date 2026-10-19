@@ -13,9 +13,9 @@ my %rename = "Gruppe" => 'Schuljahre', #11, 12, 13
 my @remove = "Teamchef Vorname", "Teamchef Nachname", 'Achievement', 'Bonus', 'Z Score', 'Total', 'Team rank', 'School rank', 'Teammitglied 1 Benutzername', 'Teammitglied 1 Vorname', 'Teammitglied 1 Nachname', 'Teammitglied 1 Klasse';
 
 #| Preprocess an Biber csv files to extract for Data Science.
-sub MAIN(Str :$input-dir, Str :$output-file = "biber-preprocessed.csv") {
-    my @aoh_single = single($input-dir);
-    my @aoh_team = team($input-dir);
+sub MAIN(Str :$input-dir, Str :$output-file = "Biber-Daten-Long.csv", Str :$input-csv-sep = ";") {
+    my @aoh_single = single($input-dir, $input-csv-sep);
+    my @aoh_team = team($input-dir, $input-csv-sep);
 
     my @aoh = |@aoh_single, |@aoh_team;
 
@@ -81,7 +81,7 @@ sub MAIN(Str :$input-dir, Str :$output-file = "biber-preprocessed.csv") {
     csv(in => @long-format, out => $out-file, sep => ",", headers => "true");
 }
 
-sub team($input-dir) {
+sub team($input-dir, $input-csv-sep) {
   flat gather {
       for $input-dir.IO.dir.grep(/.*\d\d\d\d.*Gruppe\.csv$/) -> $in-file {
         say "Processing $in-file";
@@ -90,7 +90,7 @@ sub team($input-dir) {
 
         my $team = 1;
         
-        my @aoh = csv(in => $in-file, headers => "true", sep => ";");
+        my @aoh = csv(in => $in-file, headers => "true", sep => $input-csv-sep);
 
         # anonymize, rename, remove columns
         my @team-entries;
@@ -139,14 +139,14 @@ sub team($input-dir) {
   }
 }
 
-sub single($input-dir) {
+sub single($input-dir, $input-csv-sep) {
     flat gather {
       for $input-dir.IO.dir.grep(/.*\d\d\d\d.*Einzel\.csv$/) -> $in-file {
         say "Processing $in-file";
 
         my ($jahr, $schule, $land) = get-infor-from-filename($in-file);
 
-        my @aoh = csv(in => $in-file, headers => "true", sep => ";");
+        my @aoh = csv(in => $in-file, headers => "true", sep => $input-csv-sep);
 
         # rename, remove columns
         for @aoh -> %row {
