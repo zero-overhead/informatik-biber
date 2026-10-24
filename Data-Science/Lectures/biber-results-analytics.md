@@ -94,8 +94,8 @@ leaderboard
 
 ```python
 df.pivot_table(
-    columns = ['Klassenstufe', 'Schule'],
-    index=['Jahr', 'Team'],
+    index = ['Klassenstufe', 'Team', 'Schule'],
+    columns = ['Jahr'],
     values='Punkte',
     aggfunc='mean'
 )
