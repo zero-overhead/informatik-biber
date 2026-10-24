@@ -1,65 +1,55 @@
 #!/usr/bin/env raku
 
+# Tools/biber-preprocess.raku --input-dir=Resultate --output-file=Daten/Biber-Daten-Long.csv 
+
 use Text::CSV:ver<0.022>:auth<zef:Tux>;
 
 # fix random seed - however, anonymization is not yet reproducible
 srand(90210);
 
-my %rename = "Gruppe" => 'Schuljahre', #11, 12, 13
-             "Teamchef Benutzername" => "Name",
-             "Teamchef Klassen-/ Kursname" => "Klasse",#Spaltenname im Jahr 2024
-             "Teamchef Klasse" => "Klasse";#Spaltenname im Jahr 2025
+my $NA-string = "none";
 
+# Columns in input that need renaming
+my %rename = "Gruppe" => 'Schuljahre', #11-12-13
+             "Teamchef Benutzername" => "Name", # login name of student
+             "Teamchef Klassen-/ Kursname" => "Klasse",# Spaltenname im Jahr 2024
+             "Teamchef Klasse" => "Klasse";# Spaltenname im Jahr 2025
+
+# remove columns that are not needed for data science
 my @remove = "Teamchef Vorname", "Teamchef Nachname", 'Achievement', 'Bonus', 'Z Score', 'Total', 'Team rank', 'School rank', 'Teammitglied 1 Benutzername', 'Teammitglied 1 Vorname', 'Teammitglied 1 Nachname', 'Teammitglied 1 Klasse';
 
+# anonymization length for each column, e.g. KSXX -> "abcd" (Schule -> 4 random characters)
+my %anon-length =
+    Name   => 6,
+    Klasse => 5,
+    Schule => 4,
+    Team   => 3;
+
 #| Preprocess an Biber csv files to extract for Data Science.
-sub MAIN(Str :$input-dir, Str :$output-file = "Biber-Daten-Long.csv", Str :$input-csv-sep = ";") {
-    my @aoh_single = single($input-dir, $input-csv-sep);
-    my @aoh_team = team($input-dir, $input-csv-sep);
+sub MAIN(Str :$input-dir = "Resultate", Str :$output-file = "Daten/Biber-Daten-Long.csv", Str :$input-csv-sep = ";") {
+   # read csv files and create Array of Hashes (AoH) for single and team files
+    my @aoh = |single($input-dir, $input-csv-sep),
+              |team($input-dir, $input-csv-sep);
 
-    my @aoh = |@aoh_single, |@aoh_team;
-
-    # Anonymize names, classes, schools and teams
-    my @names = @aoh>>.{"Name"};
-    my $names = @names.Set;
-    my Set $anonym-names = [].Set;
-    while $names.elems != $anonym-names.elems {
-        $anonym-names = $names.map({('a'...'z').pick(5).join("")}).Set;
+    say "Anonymize {@aoh.elems} students records columns: {%anon-length.keys.join(", ")}";
+    for %anon-length.kv -> $column, $length {
+            my Set $values = @aoh>>.{$column}.Set;
+            my Set $anonym-values;
+            
+            while $values.elems != $anonym-values.elems {
+                $anonym-values = $values.map({('a'...'z').pick($length).join("")}).Set;
+            }
+            my %randomized-values-map = $values.keys Z=> $anonym-values.keys;
+            
+            # replace old values with randomized values
+            for @aoh -> %row {
+                my $original_val = %row{$column};
+                my $randomized_val = %randomized-values-map{$original_val};
+                %row{$column} =  $randomized_val if %row{$column} ne $NA-string;
+            }
     }
-    my %match-names = $names.keys Z=> $anonym-names.keys;
-
-    my @klassen = @aoh>>.{"Klasse"};
-    my $klassen = @klassen.Set;
-    my Set $anonym-klassen = [].Set;
-    while $klassen.elems != $anonym-klassen.elems {
-        $anonym-klassen = $klassen.map({('A'...'Z').pick(3).join("")}).Set;
-    }
-    my %match-klassen = $klassen.keys Z=> $anonym-klassen.keys;
     
-    my @schulen = @aoh>>.{"Schule"};
-    my $schulen = @schulen.Set;
-    my Set $anonym-schulen = [].Set;
-    while $schulen.elems != $anonym-schulen.elems {
-        $anonym-schulen = $schulen.map({('A'...'Z').pick(4).join("")}).Set;
-    }
-    my %match-schulen = $schulen.keys Z=> $anonym-schulen.keys;
-
-    my @teams = @aoh>>.{"Team"};
-    my $teams = @teams.Set;
-    my Set $anonym-teams = [].Set;
-    while $teams.elems != $anonym-teams.elems {
-        $anonym-teams = $teams.map({('a'...'z').pick(4).join("")}).Set;
-    }
-    my %match-teams = $teams.keys Z=> $anonym-teams.keys;
-
-    # replace old values with randomized values
-    for @aoh -> %row {
-        %row<Name> =  %match-names{%row<Name>};  
-        %row<Klasse> =  %match-klassen{%row<Klasse>};  
-        %row<Schule> =  %match-schulen{%row<Schule>};  
-        %row<Team> =  %match-teams{%row<Team>} if %row<Team> ne 'N/A';  
-    }
-
+    # write csv file in long format
     my @column-keys = <Jahr Schule Land Schuljahre Name Klasse Team>;
     my @long-format;
 
@@ -77,7 +67,7 @@ sub MAIN(Str :$input-dir, Str :$output-file = "Biber-Daten-Long.csv", Str :$inpu
 
     # write to csv
     my Str $out-file =  $output-file.IO.extension("anonym.csv").Str;
-    say "Writing {@long-format.elems} rows to $out-file";
+    say "Writing {@long-format.elems} anonymized answers to $out-file";
     csv(in => @long-format, out => $out-file, sep => ",", headers => "true");
 }
 
@@ -86,7 +76,9 @@ sub team($input-dir, $input-csv-sep) {
       for $input-dir.IO.dir.grep(/.*\d\d\d\d.*Gruppe\.csv$/) -> $in-file {
         say "Processing $in-file";
 
-        my ($jahr, $schule, $land) = get-infor-from-filename($in-file);
+        # CH_KSZZ_Wettbewerb_2025_Resultate_9-10_Einzel.csv
+        my $match = $in-file.basename ~~ /^^(\w\w)_(\w\w\w\w)_.*(\d\d\d\d).*csv$$/;
+        my ($land, $schule, $jahr) = $match>>.Str;
 
         my $team = 1;
         
@@ -117,7 +109,7 @@ sub team($input-dir, $input-csv-sep) {
 
             # add year
             %row<Jahr> = $jahr;
-            %row<Team> = 'N/A';
+            %row<Team> = $NA-string;
             %row<Schule> =  $schule;
             %row<Land> =  $land;
             
@@ -133,7 +125,7 @@ sub team($input-dir, $input-csv-sep) {
         }
 
         @aoh = |@aoh, |@team-entries;
-        say @aoh.elems, " rows"; 
+        say @aoh.elems, " team rows"; 
         take @aoh;
       }
   }
@@ -144,7 +136,9 @@ sub single($input-dir, $input-csv-sep) {
       for $input-dir.IO.dir.grep(/.*\d\d\d\d.*Einzel\.csv$/) -> $in-file {
         say "Processing $in-file";
 
-        my ($jahr, $schule, $land) = get-infor-from-filename($in-file);
+        # CH_KSZZ_Wettbewerb_2025_Resultate_9-10_Einzel.csv
+        my $match = $in-file.basename ~~ /^^(\w\w)_(\w\w\w\w)_.*(\d\d\d\d).*csv$$/;
+        my ($land, $schule, $jahr) = $match>>.Str;
 
         my @aoh = csv(in => $in-file, headers => "true", sep => $input-csv-sep);
 
@@ -171,25 +165,14 @@ sub single($input-dir, $input-csv-sep) {
             %row<Schule> = $schule;
             %row<Land> = $land;
 
+            # if name is empty, add random name - big enought to make sure there is no collision
+            %row{'Name'} = ('a'...'z').pick(100).join("") unless %row{'Name'}:exists;
+            
             # add dummy columns for team member to have same structure as team files
-            %row<Team> = 'N/A';
+            %row<Team> = $NA-string;
         }
-        say @aoh.elems, " rows"; 
+        say @aoh.elems, " single rows"; 
         take @aoh;
       }
     }
 }
-
-sub get-infor-from-filename($in-file) {
-    my $jahr = $in-file.basename ~~ /(\d\d\d\d)/;
-    $jahr = $jahr[0].Str;
-    
-    my $schule = $in-file.basename ~~ /_(\w\w\w\w)_.*/;
-    $schule = $schule[0].Str;
-    
-    my $land = $in-file.basename ~~ /^^(\w\w)_.*/;
-    $land = $land[0].Str;
-
-    return ($jahr, $schule, $land);
-}
-

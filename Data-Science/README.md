@@ -28,7 +28,7 @@ und anschliessend die Rohdaten vorbereiten
 Abschliessend die Datei `Biber-Daten-Long.anonym.csv` neu erstellen durch Aufruf von:
 
 ```bash
-raku Tools/biber-preprocess.raku --input-dir=Resultate
+raku Tools/biber-preprocess.raku
 ```
 
 oder mit optionalen Parametern
@@ -40,18 +40,23 @@ raku Tools/biber-preprocess.raku --input-dir=Resultate --input-csv-sep=";" --out
 Die Beispieldaten sollten diesen Output geben
 
 ```bash
+Processing Resultate/CH_KSZZ_Wettbewerb_2025_Resultate_9-10_Einzel.csv
+2 single rows
 Processing Resultate/CH_BZAA_Wettbewerb_2025_Resultate_Einzel.csv
-2 rows
+2 single rows
 Processing Resultate/CH_KSXX_Wettbewerb_2021_Resultate_7-8_Einzel.csv
-2 rows
+2 single rows
+Processing Resultate/CH_KRAA_Wettbewerb_2023_Resultate_7-8_Einzel.csv
+2 single rows
 Processing Resultate/CH_KSYY_Wettbewerb_2025_Resultate_Gruppe.csv
-3 rows
-Writing 119 rows to Daten/Biber-Daten-Long.anonym.csv
+3 team rows
+Anonymize 11 students records columns: Name, Schule, Klasse, Team
+Writing 193 anonymized answers to Daten/Biber-Daten-Long.anonym.csv
 ```
 
 Die Datei `Biber-Daten-Long.anonym.csv` enthält nur noch anonymisierte Daten in Bezug auf Schule, Klasse und Schülernamen.
 
-**Wichtig:** Beim Hochladen der Lernenden-Daten am Anfang des Biber-Jahres auf https://wettbewerb.informatik-biber.ch/admin/ für jeden Schüler über mehrere Jahre immer den gleichen Benutzernamen und die gleiche Klasse verwenden. Nur dann ist jeder Lernende mit Land+Schule+Klasse+Name über mehrere Jahre eindeutig identifizierbar und trotzdem anonym. Die Leistung einzelner SuS kann dann über mehrere Jahre nachverfolgt und anonym analysiert werden.
+**Wichtig:** Beim Hochladen der Lernenden-Daten am Anfang des Biber-Jahres auf https://wettbewerb.informatik-biber.ch/admin/ für jeden Schüler über mehrere Jahre immer den gleichen Benutzernamen und die gleiche Klasse verwenden. Nur dann ist jeder Lernende mit Land+Schule+Klasse+Name über mehrere Jahre eindeutig identifizierbar und trotzdem anonym. Die Leistung einzelner SuS kann so über mehrere Jahre anonym nachverfolgt und analysiert werden.
 
 Beispiel: für Susi Meier wird in jedem Jahr der gleiche Benutzername und die gleiche Klasse für den [Wettbewerb](https://wettbewerb.informatik-biber.ch/index.php?action=login) verwendet.
 
@@ -66,5 +71,12 @@ Installieren nach Anleitung: https://raku.org/install
 Anschliessend Package installieren:
 
 ```bash
-zef install Text::CSV:ver<0.022>:auth<zef:Tux>
+zef install Text::CSV:ver<0.022>:auth<zef:Tux> Markdown::Grammar File::Find
+```
+
+Zu Demonstrationszwecken ist ein Markdown-Beispiel enthalten, welches mit einem Script aus meiner "Unterrichts-Tools-Sammlung" (siehe `Tools/markdown-2-ipynb.raku`) in ein Jupyter-Notebook umgewandelt werden kann. In meinem Workflow sind Markdown-Dateien immer die "Golden Source of Truth".
+
+```bash
+cd Data-Science
+raku Tools/markdown-2-ipynb.raku
 ```
