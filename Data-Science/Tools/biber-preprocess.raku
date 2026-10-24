@@ -5,52 +5,33 @@
 use Text::CSV:ver<0.022>:auth<zef:Tux>;
 
 # fix random seed - however, anonymization is not yet reproducible
-srand(90210);
+#srand(90210);
 
 my $NA-string = "none";
 
 # Columns in input that need renaming
-my %rename = "Gruppe" => 'Schuljahre', #11-12-13
+my %rename = "Gruppe" => 'Klassenstufe', #11-12-13
              "Teamchef Benutzername" => "Name", # login name of student
              "Teamchef Klassen-/ Kursname" => "Klasse",# Spaltenname im Jahr 2024
              "Teamchef Klasse" => "Klasse";# Spaltenname im Jahr 2025
 
 # remove columns that are not needed for data science
-my @remove = "Teamchef Vorname", "Teamchef Nachname", 'Achievement', 'Bonus', 'Z Score', 'Total', 'Team rank', 'School rank', 'Teammitglied 1 Benutzername', 'Teammitglied 1 Vorname', 'Teammitglied 1 Nachname', 'Teammitglied 1 Klasse';
-
-# anonymization length for each column, e.g. KSXX -> "abcd" (Schule -> 4 random characters)
-my %anon-length =
-    Name   => 6,
-    Klasse => 5,
-    Schule => 4,
-    Team   => 3;
+my @remove = "Teamchef Vorname", "Teamchef Nachname", 'Achievement', 'Z Score', 'Total', 'Team rank', 'School rank', 'Teammitglied 1 Benutzername', 'Teammitglied 1 Vorname', 'Teammitglied 1 Nachname', 'Teammitglied 1 Klasse';
 
 #| Preprocess an Biber csv files to extract for Data Science.
-sub MAIN(Str :$input-dir = "Resultate", Str :$output-file = "Daten/Biber-Daten-Long.csv", Str :$input-csv-sep = ";") {
+sub MAIN(Str :$input-dir = "Resultate", Str :$output-file = "Daten/Biber-Daten-Long.csv", Str :$input-csv-sep = ";", Bool :$anonymize = True, Str :$vornamen-file-f = "Daten/CH_vornamen_f.csv", Str :$vornamen-file-m = "Daten/CH_vornamen_m.csv", Str :$nachnamen-file = "Daten/CH_nachnamen.csv", Bool :$debug) {
    # read csv files and create Array of Hashes (AoH) for single and team files
     my @aoh = |single($input-dir, $input-csv-sep),
               |team($input-dir, $input-csv-sep);
 
-    say "Anonymize {@aoh.elems} students records columns: {%anon-length.keys.join(", ")}";
-    for %anon-length.kv -> $column, $length {
-            my Set $values = @aoh>>.{$column}.Set;
-            my Set $anonym-values;
-            
-            while $values.elems != $anonym-values.elems {
-                $anonym-values = $values.map({('a'...'z').pick($length).join("")}).Set;
-            }
-            my %randomized-values-map = $values.keys Z=> $anonym-values.keys;
-            
-            # replace old values with randomized values
-            for @aoh -> %row {
-                my $original_val = %row{$column};
-                my $randomized_val = %randomized-values-map{$original_val};
-                %row{$column} =  $randomized_val if %row{$column} ne $NA-string;
-            }
+    if $anonymize {
+       @aoh = anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug);
+    } else {
+        say "Skipping anonymization";
     }
     
     # write csv file in long format
-    my @column-keys = <Jahr Schule Land Schuljahre Name Klasse Team>;
+    my @column-keys = <Jahr Schule Land Klassenstufe Name Klasse Team>;
     my @long-format;
 
     # create long format
@@ -66,9 +47,51 @@ sub MAIN(Str :$input-dir = "Resultate", Str :$output-file = "Daten/Biber-Daten-L
     }
 
     # write to csv
-    my Str $out-file =  $output-file.IO.extension("anonym.csv").Str;
-    say "Writing {@long-format.elems} anonymized answers to $out-file";
+    my $extension = "csv";
+    $extension = "anonym.csv" if $anonymize;
+    my Str $out-file =  $output-file.IO.extension($extension).Str;
+    say "Writing {@long-format.elems} answers to $out-file";
     csv(in => @long-format, out => $out-file, sep => ",", headers => "true");
+}
+
+sub anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug) {
+        
+        say "reading data for anonymization from $vornamen-file-m, $vornamen-file-f, $nachnamen-file)" if $debug;
+        my @vornamen-m = $vornamen-file-m.IO.slurp().lines().skip();
+        my @vornamen-f = $vornamen-file-f.IO.slurp().lines().skip();
+        my @nachnamen = $nachnamen-file.IO.slurp().lines().skip();
+        
+        my $vornamen = BagHash.new-from-pairs: @vornamen-m.skip()>>.split(";")>>.pairup,
+                       BagHash.new-from-pairs: @vornamen-f.skip()>>.split(";")>>.pairup;
+        
+        my $nachnamen = BagHash.new-from-pairs: @nachnamen.skip()>>.split(";")>>.pairup;
+        
+        say "anonymization length for each column, e.g. KSXX -> 'abcd' (Schule -> 4 random characters)" if $debug;
+        my %anon-length =
+            Name   => {($vornamen.pick(), $nachnamen.pick()).join(" ")}, 
+            Klasse => {(('A'...'Z').pick(1),(1..4).rand.Int,(1..10).rand.Int,('a'...'h').pick(1)).flat.join("")},
+            Schule => {(("K", "B", "R", "S").pick(1), "S", ('A'...'Z').pick(2)).flat.join("")},
+            Team   => {(('A'...'Z').pick(2),(4..10).rand().Int,(1..7).rand().Int).flat.join("")}
+        ;
+
+        say "Anonymize {@aoh.elems} students on columns: {%anon-length.keys.join(", ")}";
+        for %anon-length.kv -> $column, &fn {
+                my Set $values = @aoh>>.{$column}.Set;
+                my Set $anonym-values;
+                
+                while $values.elems != $anonym-values.elems {
+                    $anonym-values = $values.map({&fn()}).Set;
+                }
+                my %randomized-values-map = $values.keys Z=> $anonym-values.keys;
+                
+                # replace old values with randomized values
+                for @aoh -> %row {
+                    my $original_val = %row{$column};
+                    my $randomized_val = %randomized-values-map{$original_val};
+                   %row{$column} =  $randomized_val if %row{$column} ne $NA-string;
+                }
+        }
+        return @aoh;
 }
 
 sub team($input-dir, $input-csv-sep) {
@@ -103,9 +126,9 @@ sub team($input-dir, $input-csv-sep) {
             }
 
             # remove "Schuljahre " from string
-            %row<Schuljahre> ~~ s:g/Schuljahre \s //;
-            %row<Schuljahre> ~~ s:g/\s und /,/;
-            %row<Schuljahre> ~~ s:g/ \, \s /+/;
+            %row<Klassenstufe> ~~ s:g/Schuljahre \s //;
+            %row<Klassenstufe> ~~ s:g/\s und /,/;
+            %row<Klassenstufe> ~~ s:g/ \, \s /+/;
 
             # add year
             %row<Jahr> = $jahr;
@@ -156,16 +179,16 @@ sub single($input-dir, $input-csv-sep) {
             }
 
             # remove "Schuljahre " from string
-            %row<Schuljahre> ~~ s:g/Schuljahre \s //;
-            %row<Schuljahre> ~~ s:g/\s und /,/;
-            %row<Schuljahre> ~~ s:g/ \, \s /+/;
+            %row<Klassenstufe> ~~ s:g/Schuljahre \s //;
+            %row<Klassenstufe> ~~ s:g/\s und /,/;
+            %row<Klassenstufe> ~~ s:g/ \, \s /+/;
 
             # add year
             %row<Jahr> = $jahr;
             %row<Schule> = $schule;
             %row<Land> = $land;
 
-            # if name is empty, add random name - big enought to make sure there is no collision
+            # if name is empty, add random name - big enough to make sure there is no collision
             %row{'Name'} = ('a'...'z').pick(100).join("") unless %row{'Name'}:exists;
             
             # add dummy columns for team member to have same structure as team files
