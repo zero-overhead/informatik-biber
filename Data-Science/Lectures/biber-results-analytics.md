@@ -88,8 +88,8 @@ df.pivot_table(
 ```
 
 ```python
-anzahl = 2
-show_worst = False
+anzahl = 3
+show_worst_scores = False
 
 punkte = (
     df.groupby(
@@ -100,7 +100,7 @@ punkte = (
 
 punkte["Rang"] = (
     punkte.groupby(["Jahr", "Klassenstufe"])["Punkte"]
-    .rank(method="min", ascending=show_worst)
+    .rank(method="min", ascending=show_worst_scores)
 )
 
 rangliste = (
@@ -108,12 +108,12 @@ rangliste = (
     [["Jahr", "Klassenstufe", "Schule", "Klasse", "Name", "Punkte"]]
     .sort_values(
         ["Jahr", "Klassenstufe", "Punkte", "Klasse", "Name"],
-        ascending=[True, False, show_worst, True, True]
+        ascending=[True, False, show_worst_scores, True, True]
     )
     .reset_index(drop = True)
 )
 
-rangliste
+rangliste[rangliste['Jahr'] == 2025]
 ```
 
 ## Grafiken erstellen
