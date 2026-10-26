@@ -31,7 +31,7 @@ sub MAIN(Str :$input-dir = "Resultate",
     my @aoh = read-data($input-dir, $input-csv-sep, $debug).flat();
 
     if $anonymize {
-        say "Anonymize" if $debug;
+        say "Anonymizing student answers" if $debug;
         @aoh = anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug);
     } else {
         say "Skipping anonymization" if $debug;
@@ -62,7 +62,7 @@ sub MAIN(Str :$input-dir = "Resultate",
 
 sub anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug) {
         
-        say "reading data for anonymization from $vornamen-file-m, $vornamen-file-f, $nachnamen-file" if $debug;
+        say "Reading data for anonymization from $vornamen-file-m, $vornamen-file-f, $nachnamen-file" if $debug;
         my @vornamen-m = $vornamen-file-m.IO.slurp().lines().skip();
         my @vornamen-f = $vornamen-file-f.IO.slurp().lines().skip();
         my @nachnamen = $nachnamen-file.IO.slurp().lines().skip();
@@ -72,7 +72,7 @@ sub anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug)
         
         my $nachnamen = BagHash.new-from-pairs: @nachnamen.skip()>>.split(";")>>.pairup;
         
-        say "Reading hard-coded specification for anonymization for each column, e.g. KSXX -> 'abcd' (Schule -> 4 random characters)" if $debug;
+        say "Reading hard-coded specification for anonymization for each column" if $debug;
         my %anon-length =
             Name   => {($vornamen.pick(), $nachnamen.pick()).join(" ")}, 
             Klasse => {(('A'...'Z').pick(1),(1..4).rand.Int,(1..10).rand.Int,('a'...'h').pick(1)).flat.join("")},
@@ -81,6 +81,8 @@ sub anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug)
         ;
 
         say "Anonymize {@aoh.elems} students on columns: {%anon-length.keys.join(", ")}" if $debug;
+        # ToDo: ensure anonymization is unique to only "School+Name" (which is the requirement from informatik-biber when logins are created by teacher)
+        # so we can have duplicate names across different schools - currently all names are unique :-(
         for %anon-length.kv -> $column, &fn {
                 my Set $values = @aoh>>.{$column}.Set;
                 my Set $anonym-values;
@@ -103,15 +105,24 @@ sub anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug)
 sub read-data($input-dir, $input-csv-sep, $debug) {
     flat gather {
       for $input-dir.IO.dir.grep(/.* 
-                                    \w ** {2..2} _ 
-                                    \w  ** {4..4} _ .* 
-                                    \d  ** {4..4} .* _ 
-                                    (Gruppe|Einzel) \.csv$/
-                                ) -> $in-file {
+                                    \w ** {2..2} _          #`(match the Country)
+                                    \w  ** {4..4} _ .*      #`(match the School)
+                                    \d  ** {4..4} .* _      #`(match the year)
+                                    (Gruppe|Einzel) 
+                                    \. csv
+                                $$/) -> $in-file {
         say "Reading $in-file" if $debug;
         
         # CH_KSZZ_Wettbewerb_2025_Resultate_9-10_Einzel.csv
-        my $match = $in-file.basename ~~ /^^(\w\w)_(\w\w\w\w)_.*(\d\d\d\d).*csv$$/;
+        my $match = $in-file.basename ~~ /^^
+                                            ( \w ** {2..2} ) _      #`(match the Country)
+                                            ( \w ** {4..4} ) _      #`(match the School)
+                                            .*
+                                            ( \d ** {4..4} )        #`(match the year)
+                                            .* 
+                                            \. csv 
+                                        $$/;
+        
         my ($land, $schule, $jahr) = $match>>.Str;
 
         my $team = $NA-string;
