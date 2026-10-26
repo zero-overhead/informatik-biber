@@ -53,6 +53,8 @@ Teams markieren
 df["Team"] = df["Teamname"] != "none"
 ```
 
+Überprüfen
+
 ```python
 df.info()
 ```
