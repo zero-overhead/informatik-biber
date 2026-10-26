@@ -113,6 +113,10 @@ rangliste = (
     .reset_index(drop = True)
 )
 
+rangliste.tail(10)
+```
+
+```python
 rangliste[rangliste['Jahr'] == 2025]
 ```
 
