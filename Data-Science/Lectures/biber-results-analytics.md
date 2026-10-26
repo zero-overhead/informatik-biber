@@ -110,7 +110,7 @@ rangliste = (
         ["Jahr", "Klassenstufe", "Punkte", "Klasse", "Name"],
         ascending=[True, False, show_worst, True, True]
     )
-    .reset_index()
+    .reset_index(drop = True)
 )
 
 rangliste
