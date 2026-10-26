@@ -38,7 +38,7 @@ sub MAIN(Str :$input-dir = "Resultate",
     }
     
     say "Create long format" if $debug;
-    my @column-keys = <Jahr Schule Land Klassenstufe Name Klasse Team>;
+    my @column-keys = <Jahr Schule Land Klassenstufe Name Klasse Teamname>;
     my @long-format;
 
     for @aoh -> %row {
@@ -77,7 +77,7 @@ sub anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug)
             Name   => {($vornamen.pick(), $nachnamen.pick()).join(" ")}, 
             Klasse => {(('A'...'Z').pick(1),(1..4).rand.Int,(1..10).rand.Int,('a'...'h').pick(1)).flat.join("")},
             Schule => {(("K", "B", "R", "S").pick(1), "S", ('A'...'Z').pick(2)).flat.join("")},
-            Team   => {(('A'...'Z').pick(2),(4..10).rand().Int,(1..7).rand().Int).flat.join("")}
+            Teamname   => {(('A'...'Z').pick(2),(4..10).rand().Int,(1..7).rand().Int).flat.join("")}
         ;
 
         say "Anonymize {@aoh.elems} students on columns: {%anon-length.keys.join(", ")}" if $debug;
@@ -125,7 +125,7 @@ sub read-data($input-dir, $input-csv-sep, $debug) {
         
         my ($land, $schule, $jahr) = $match>>.Str;
 
-        my $team = $NA-string;
+        my $team-name = $NA-string;
         my @aoh = csv(in => $in-file, headers => "true", sep => $input-csv-sep);
 
         # anonymize, rename, remove columns
@@ -156,7 +156,7 @@ sub read-data($input-dir, $input-csv-sep, $debug) {
             %row<Jahr> = $jahr;
             %row<Schule> = $schule;
             %row<Land> = $land;
-            %row<Team> = $NA-string;
+            %row<Teamname> = $NA-string;
 
             # if name is empty, add random name - big enough to make sure there is no collision
             %row{'Name'} = ('a'...'z').pick(100).join("") unless %row{'Name'}:exists;
@@ -167,8 +167,8 @@ sub read-data($input-dir, $input-csv-sep, $debug) {
 
                 %teammember<Name> = $team-mate;
                 my $random-team-name = ('a'...'z').pick(100).join("");
-                %row<Team> = $random-team-name;
-                %teammember<Team> = $random-team-name;
+                %row<Teamname> = $random-team-name;
+                %teammember<Teamname> = $random-team-name;
                 @team-entries.push(%teammember);
             }
         }

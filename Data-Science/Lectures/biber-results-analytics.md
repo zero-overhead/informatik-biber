@@ -47,6 +47,20 @@ f = df['Aufgabe'] != 'Bonus'
 df = df[f]
 ```
 
+Teams markieren
+
+```python
+df["Team"] = df["Teamname"] != "none"
+```
+
+```python
+df.info()
+```
+
+```python
+df
+```
+
 ## mit groupby oder pivot_table analysieren
 
 ```python
@@ -57,9 +71,18 @@ df[['Jahr', 'Klassenstufe', 'Punkte']]\
 
 ```python
 df[["Jahr", "Klassenstufe", "Schule", "Punkte"]]\
-    .groupby(["Jahr", "Schule", "Klassenstufe"], observed=True)\
+    .groupby(["Jahr", "Schule", "Klassenstufe"])\
     .mean()\
     .sort_values(["Jahr", "Punkte"], ascending=[True, False])
+```
+
+```python
+df.pivot_table(
+    index = ['Klassenstufe', 'Schule'],
+    columns = ['Jahr', 'Team'],
+    values='Punkte',
+    aggfunc='mean'
+)
 ```
 
 ```python
@@ -67,15 +90,13 @@ beste = 1
 
 punkte = (
     df.groupby(
-        ["Jahr", "Klassenstufe", "Schule", "Klasse", "Name"],
-        observed=True,
-        as_index=False
+        ["Jahr", "Klassenstufe", "Schule", "Klasse", "Name"], as_index=False
     )["Punkte"]
     .sum()
 )
 
 punkte["Rang"] = (
-    punkte.groupby(["Jahr", "Klassenstufe"], observed=True)["Punkte"]
+    punkte.groupby(["Jahr", "Klassenstufe"])["Punkte"]
     .rank(method="min", ascending=False)
 )
 
@@ -90,15 +111,6 @@ leaderboard = (
 )
 
 leaderboard
-```
-
-```python
-df.pivot_table(
-    index = ['Klassenstufe', 'Team', 'Schule'],
-    columns = ['Jahr'],
-    values='Punkte',
-    aggfunc='mean'
-)
 ```
 
 ## Grafiken erstellen
