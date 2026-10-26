@@ -40,24 +40,7 @@ raku Tools/biber-preprocess.raku
 oder mit optionalen Parametern
 
 ```bash
-raku Tools/biber-preprocess.raku --input-dir=Resultate --input-csv-sep=";" --output-file=Daten/Biber-Daten-Long.csv --anonymize=True
-```
-
-Die Beispieldaten sollten diesen Output geben
-
-```bash
-Processing Resultate/CH_KSZZ_Wettbewerb_2025_Resultate_9-10_Einzel.csv
-2 single rows
-Processing Resultate/CH_BZAA_Wettbewerb_2025_Resultate_Einzel.csv
-2 single rows
-Processing Resultate/CH_KSXX_Wettbewerb_2021_Resultate_7-8_Einzel.csv
-2 single rows
-Processing Resultate/CH_KRAA_Wettbewerb_2023_Resultate_7-8_Einzel.csv
-2 single rows
-Processing Resultate/CH_KSYY_Wettbewerb_2025_Resultate_Gruppe.csv
-3 team rows
-Anonymize 11 students on columns: Name, Klasse, Schule, Team
-Writing 193 answers to Daten/Biber-Daten-Long.anonym.csv
+raku Tools/biber-preprocess.raku --debug=False --anonymize=True --output-file=Daten/Biber-Daten-Long.csv --input-csv-sep=";" --input-dir=Resultate/
 ```
 
 Die Datei `Biber-Daten-Long.anonym.csv` enthält nur noch anonymisierte Daten in Bezug auf Schule, Klasse und Schülernamen.
