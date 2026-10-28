@@ -88,9 +88,9 @@ df.pivot_table(
 ```
 
 ```python
-f = df['Aufgabe'] == 'Schichte nach Dichte!'
+ist_aufgabe = df['Aufgabe'] == 'Schichte nach Dichte!'
 
-df[f][['Jahr', 'Klassenstufe', 'Punkte']].pivot_table(
+df[ist_aufgabe][['Jahr', 'Klassenstufe', 'Punkte']].pivot_table(
     index = ['Jahr', 'Klassenstufe'],
     values = 'Punkte',
     aggfunc = ['count', 'min', 'median', 'mean', 'max']
