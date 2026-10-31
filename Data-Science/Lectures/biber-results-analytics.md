@@ -129,7 +129,8 @@ df[nur_klassenstufe].groupby( ['Aufgabe', 'Jahr', 'Klassenstufe'] )['Punkte']\
     falsch_prozent        = lambda x: round(x[x == x.min()].count() / x.count() * 100 if x.min() < 0 else 0, 1),
     richtig_prozent       = lambda x: round(x[x == x.max()].count() / x.count() * 100 if x.max() > 0 else 0, 1)
   )\
-  .sort_values(['richtig_prozent','falsch_prozent', 'Aufgabe'], ascending=[schwierigste, not schwierigste, True]).head(anzahl_aufgaben)
+  .sort_values(['richtig_prozent','falsch_prozent', 'Aufgabe'], ascending=[schwierigste, not schwierigste, True])\
+  .head(anzahl_aufgaben)
 ```
   
 ```python
