@@ -108,9 +108,35 @@ df[aufgabenauswahl]\
     std      = lambda x: round(x.std(), 1),
     kurtosis = lambda x: round(x.kurtosis(), 1),
     sum      = lambda x: x.sum(),
-)
+  )\
+  .sort_values(['Jahr', 'Aufgabe', 'Klassenstufe'], ascending=[True, True, True])
 ```
 
+```python
+schwierigste = True
+anzahl_aufgaben = 5
+nur_klassenstufe = (df['Klassenstufe'] == '9+10') | (df['Klassenstufe'] == '11+12+13')
+
+df[nur_klassenstufe].groupby( ['Jahr', 'Aufgabe'] )['Punkte']\
+  .agg(
+    count    = lambda x: x.count(),
+    min      = lambda x: x.min(),
+    q01      = lambda x: x.quantile(0.01),
+    q05      = lambda x: x.quantile(0.05),
+    q25      = lambda x: x.quantile(0.25),
+    q50      = lambda x: x.quantile(0.50),
+    q75      = lambda x: x.quantile(0.75),
+    q95      = lambda x: x.quantile(0.95),
+    q99      = lambda x: x.quantile(0.99),
+    max      = lambda x: x.max(),
+    mean     = lambda x: round(x.mean(), 1),
+    std      = lambda x: round(x.std(), 1),
+    kurtosis = lambda x: round(x.kurtosis(), 1),
+    sum      = lambda x: x.sum(),
+  )\
+  .sort_values(['mean'], ascending=[schwierigste]).head(anzahl_aufgaben)
+```
+  
 ```python
 anzahl = 3
 calculate_worst_scores = False
