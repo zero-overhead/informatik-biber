@@ -88,12 +88,26 @@ df.pivot_table(
 ```
 
 ```python
-ist_aufgabe = df['Aufgabe'] == 'Schichte nach Dichte!'
+aufgabenauswahl =   (df['Aufgabe'] == 'Schichte nach Dichte!') \
+                  | (df['Aufgabe'] == 'SOS aus den Bergen')
 
-df[ist_aufgabe][['Jahr', 'Klassenstufe', 'Punkte']].pivot_table(
-    index = ['Jahr', 'Klassenstufe'],
-    values = 'Punkte',
-    aggfunc = ['count', 'min', 'median', 'mean', 'max']
+df[aufgabenauswahl]\
+  .groupby( ['Jahr', 'Aufgabe', 'Klassenstufe'] )['Punkte']\
+  .agg(
+    count    = lambda x: x.count(),
+    min      = lambda x: x.min(),
+    q01      = lambda x: x.quantile(0.01),
+    q05      = lambda x: x.quantile(0.05),
+    q25      = lambda x: x.quantile(0.25),
+    q50      = lambda x: x.quantile(0.50),
+    q75      = lambda x: x.quantile(0.75),
+    q95      = lambda x: x.quantile(0.95),
+    q99      = lambda x: x.quantile(0.99),
+    max      = lambda x: x.max(),
+    mean     = lambda x: round(x.mean(), 1),
+    std      = lambda x: round(x.std(), 1),
+    kurtosis = lambda x: round(x.kurtosis(), 1),
+    sum      = lambda x: x.sum(),
 )
 ```
 
