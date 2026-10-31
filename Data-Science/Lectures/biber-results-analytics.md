@@ -117,7 +117,8 @@ schwierigste = True
 anzahl_aufgaben = 26
 nur_klassenstufe = (df['Klassenstufe'] == '9+10') | (df['Klassenstufe'] == '11+12+13')
 
-df[nur_klassenstufe].groupby( ['Aufgabe', 'Jahr', 'Klassenstufe'] )['Punkte']\
+df[nur_klassenstufe]\
+  .groupby( ['Aufgabe', 'Jahr', 'Klassenstufe'] )['Punkte']\
   .agg(
     antworten             = lambda x: x.count(),
     min                   = lambda x: x.min(),
