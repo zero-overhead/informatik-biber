@@ -114,27 +114,22 @@ df[aufgabenauswahl]\
 
 ```python
 schwierigste = True
-anzahl_aufgaben = 5
+anzahl_aufgaben = 26
 nur_klassenstufe = (df['Klassenstufe'] == '9+10') | (df['Klassenstufe'] == '11+12+13')
 
-df[nur_klassenstufe].groupby( ['Jahr', 'Aufgabe'] )['Punkte']\
+df[nur_klassenstufe].groupby( ['Aufgabe', 'Jahr', 'Klassenstufe'] )['Punkte']\
   .agg(
-    count    = lambda x: x.count(),
-    min      = lambda x: x.min(),
-    q01      = lambda x: x.quantile(0.01),
-    q05      = lambda x: x.quantile(0.05),
-    q25      = lambda x: x.quantile(0.25),
-    q50      = lambda x: x.quantile(0.50),
-    q75      = lambda x: x.quantile(0.75),
-    q95      = lambda x: x.quantile(0.95),
-    q99      = lambda x: x.quantile(0.99),
-    max      = lambda x: x.max(),
-    mean     = lambda x: round(x.mean(), 1),
-    std      = lambda x: round(x.std(), 1),
-    kurtosis = lambda x: round(x.kurtosis(), 1),
-    sum      = lambda x: x.sum(),
+    antworten             = lambda x: x.count(),
+    min                   = lambda x: x.min(),
+    max                   = lambda x: x.max(),
+    unbeantwortet         = lambda x: x[x == 0].count(),
+    falsch                = lambda x: x[x == x.min()].count() if x.min() < 0 else 0,
+    richtig               = lambda x: x[x == x.max()].count() if x.max() > 0 else 0,
+    unbeantwortet_prozent = lambda x: round(x[x == 0].count() / x.count() * 100, 1),
+    falsch_prozent        = lambda x: round(x[x == x.min()].count() / x.count() * 100 if x.min() < 0 else 0, 1),
+    richtig_prozent       = lambda x: round(x[x == x.max()].count() / x.count() * 100 if x.max() > 0 else 0, 1)
   )\
-  .sort_values(['mean'], ascending=[schwierigste]).head(anzahl_aufgaben)
+  .sort_values(['richtig_prozent','falsch_prozent', 'Aufgabe'], ascending=[schwierigste, not schwierigste, True]).head(anzahl_aufgaben)
 ```
   
 ```python
