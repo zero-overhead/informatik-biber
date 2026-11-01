@@ -1,0 +1,12 @@
+buttons = ["pageLength", "copyHtml5", "csvHtml5"]
+
+[[columnControl]]
+target = 0
+content = ["order"]
+[[columnControl]]
+target = "tfoot"
+content = ["search"]
+
+[ordering]
+indicators = true
+handler = true

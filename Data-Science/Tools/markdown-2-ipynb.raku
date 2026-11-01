@@ -1,0 +1,183 @@
+#!/usr/bin/env raku
+use v6.d;
+use Markdown::Grammar;
+use File::Find;
+
+# for Raku regex see https://docs.raku.org/language/regexes
+
+# ignored patterns in file and directory names
+my $black-list-file-regex = / README\.md | LICENSE\.md /;
+my $black-list-folder-regex = / \.ipynb_checkpoints | \.git | \.obsidian | \.idea | \.vscode | \.eclipse /;
+
+# white list markdown files pattern to be converted
+#my $white-list-file-regex = / Exercises | Notes /;
+my $white-list-file-regex = / .+ /;
+
+# convert only Markdown files that are not empty
+#my $content-regex = / \w+ /;
+# convert only Markdown files that have a #jupyter tag
+#my $content-regex = / \#jupyter /;
+# Convert only Markdown files that contain a code block like
+# ```python
+# print("Hello World!")
+# ````
+# or any other language tag listed in @languages
+my @languages = <python raku bash java js ruby perl code rust>;
+my $content-regex = / \` ** 3 @languages .+ \` ** 3 /;
+
+# we use a global variable for setting verbosity
+my $global-verbose-mode = False;
+
+# how to identify markdown files
+my $markdown-file-regex = /\.md$$/;
+
+#| Converts Markdown Files in $input-dir into Jupyter Notebooks.
+sub MAIN(IO::Path(Str) :$input-dir =  $*PROGRAM.parent(2), #= defaults to ../../ relative to the path of this script. 
+         Bool          :$verbose = False,                  #= print status messages 
+         Bool          :$daemon = False,                   #= watch input dir for changes and convert markdown to jupyter
+    ) {
+
+    fail "Input directory does not exist: $input-dir" unless $input-dir.d;
+
+    $global-verbose-mode = True if $verbose;
+    
+    $daemon
+        ?? daemon-mode($input-dir)
+        !! single-run($input-dir)
+}
+
+#| convert all files in input-dir to jupyter notebooks
+sub single-run(IO::Path $input-dir) {
+    
+    my @markdown-files = find-markdown-files($input-dir);
+    status-message($input-dir, @markdown-files);
+
+    # sorted processing file by file if verbose mode is set
+    if $global-verbose-mode {
+        for @markdown-files.sort -> $markdown-file {
+            my $now = DateTime.now.truncated-to('second');
+            note "$now processing $markdown-file";
+            process-file($markdown-file) 
+        }
+    } else {
+        # potentially parallel, out-of-order processing of markdown files
+        @markdown-files.race.map: { process-file($_) }
+    }
+}
+
+#| convert single file to jupyter notebook
+sub process-file(IO::Path $markdown-file) {
+    
+    my ($needs-processing, $jupyter-file-name, $jupyter-file-content) = check-and-prepare($markdown-file);
+    write-notebook($jupyter-file-name, $jupyter-file-content) if $needs-processing
+
+}
+
+#| watch input dir and subfolders and react on file change events
+sub daemon-mode(IO::Path $input-dir) {
+
+    single-run($input-dir);
+    
+    # see https://docs.raku.org/type/Supply#method_stable for details
+    my $supply = watch-recursive($input-dir, :update);
+
+    if $global-verbose-mode {
+        $supply = $supply.map( { log-event($_); $_ } )
+    }
+    $supply = $supply.grep( { $_.path ~~ $markdown-file-regex } );
+
+    say "Starting daemon mode - press CTRL+c to abort";
+    react {
+            whenever $supply -> $event {
+                process-file($event.path.IO)
+            }
+    }
+}
+
+####################
+# Helper Functions #
+####################
+
+sub write-notebook(IO::Path $jupyter-file-name, Str $jupyter-file-content){
+    my $now = DateTime.now.truncated-to('second');
+    $jupyter-file-name.spurt($jupyter-file-content)
+        ?? say "$now writing $jupyter-file-name"
+        !! note "$now not converted: could not write to\t$jupyter-file-name"
+}
+
+sub status-message(IO::Path $input-dir, @markdown-files){
+    say "Reading from\t$input-dir";
+    say "Markdown file count\t", @markdown-files.elems;
+    say "Black list folder regex\t", $black-list-folder-regex if $global-verbose-mode;
+    say "Black list file regex\t", $black-list-file-regex if $global-verbose-mode;
+    say "White list file regex\t", $white-list-file-regex if $global-verbose-mode;
+    say "Content regex\t", $content-regex if $global-verbose-mode;
+    prompt "CTRL+c to stop - any other key to proceed.";
+}
+
+sub check-and-prepare(IO::Path $markdown-file){
+
+    # check
+    my ($process, $markdown-file-content) = needs-processing($markdown-file);
+    return False unless $process;
+
+    # prepare
+    my $jupyter-file-name = $markdown-file.extension("ipynb");
+    my Str $jupyter-file-content = from-markdown($markdown-file-content, flavor => 'obsidian', to => 'jupyter', default-language => 'python');
+    
+    return $process, $jupyter-file-name, $jupyter-file-content
+}
+
+sub needs-processing(IO::Path $markdown-file) {
+    if $markdown-file.match( $black-list-folder-regex  ) or $markdown-file.match( $black-list-file-regex  ) {
+        note "black listed ignorring $markdown-file" if $global-verbose-mode;
+        return False
+    }
+
+    if not $markdown-file.match( $white-list-file-regex  ) {
+        note "not white listed ignorring $markdown-file" if $global-verbose-mode;
+        return False
+    }
+
+    my Str $markdown-file-content = slurp $markdown-file;
+    my $has-accepted-content = $markdown-file-content.match( $content-regex );
+    if not $has-accepted-content {
+        my $now = DateTime.now.truncated-to('second');
+        note "$now ignoring $markdown-file" if $global-verbose-mode;
+        return False
+    }
+    return True, $markdown-file-content
+}
+
+sub find-markdown-files(IO::Path:D $dir){
+    find :$dir, :type<file>, name => $markdown-file-regex; #, exclude => any($black-list-folder-regex, $black-list-file-regex); # we do exclude in needs-processing() to give good error messages
+}
+
+#| copy/paste from see https://github.com/raku-community-modules/IO-Notification-Recursive/blob/main/lib/IO/Notification/Recursive.rakumod
+sub find-dirs(IO::Path:D $dir) {
+    slip $dir.IO, slip find :$dir, :type<dir>, exclude => $black-list-folder-regex
+}
+
+sub log-event(IO::Notification::Change $event){
+    if $global-verbose-mode {
+        $event.path.IO.f and $event.path ~~ $markdown-file-regex
+                ?? note "Processing {$event.event} event for {$event.path}"
+                !! note "Ignoring  {$event.event} event for {$event.path}"
+    }
+}
+
+sub watch-recursive(IO(Cool) $start, Bool :$update) {
+    supply {
+        my sub watch-it(IO::Path:D $io) {
+            whenever $io.watch -> $e {
+                if $update {
+                    if $e.event ~~ FileRenamed && $e.path.IO.d {
+                        watch-it($_) for find-dirs $e.path.IO;
+                    }
+                }
+                emit $e;
+            }
+        }
+        watch-it($_) for find-dirs $start;
+    }
+}

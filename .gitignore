@@ -1,0 +1,6 @@
+.DS_Store
+.precomp/
+nohup.out
+.ipynb_checkpoints/
+.virtual_documents/
+.direnv/
