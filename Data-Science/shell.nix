@@ -17,6 +17,7 @@
         itables
         jupyterlab-lsp
         jupyterlab-git
+        jupyterlab-widgets
         jedi-language-server
       ]))
     ];
