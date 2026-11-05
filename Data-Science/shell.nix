@@ -12,7 +12,6 @@
         matplotlib
         seaborn
         requests
-        keyboard
         ollama
         itables
         jupyterlab-lsp
