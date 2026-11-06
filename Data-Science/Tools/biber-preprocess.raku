@@ -9,6 +9,32 @@ use Text::CSV:ver<0.022>:auth<zef:Tux>;
 
 my $NA-string = "none";
 
+# Class matcher
+my @class-match = 'G\d\w' => 'GYM',
+                  'F\d\w' => 'FMS',
+                  'Sek' => 'Sek',
+                  'Bez' => 'Bez',
+                  'Real' => 'Real';
+
+# schuljahre matcher
+my @year-match =  'G1\w' => 10,
+                  'G2\w' => 11,
+                  'G3\w' => 12,
+                  'G4\w' => 13,
+                  'F1\w' => 10,
+                  'F2\w' => 11,
+                  'F3\w' => 12,
+                  'F4\w' => 13,
+                  '1.\sReal' => 7,
+                  '2.\sReal' => 8,
+                  '3.\sReal' => 9,
+                  '1.\sSek' => 7,
+                  '2.\sSek' => 8,
+                  '3.\sSek' => 9,
+                  '1.\sBez' => 7,
+                  '2.\sBez' => 8,
+                  '3.\sBez' => 9;
+
 # Columns in input that need renaming
 my %rename = "Gruppe" => 'Klassenstufe', #11-12-13
              "Teamchef Benutzername" => "Name", # login name of student
@@ -157,6 +183,10 @@ sub read-data($input-dir, $input-csv-sep, $debug) {
             %row<Schule> = $schule;
             %row<Land> = $land;
             %row<Teamname> = $NA-string;
+
+            # match 
+            %row<Schulstufe> = $NA-string;
+            %row<Klassenstufe> = $NA-string;
 
             # if name is empty, add random name - big enough to make sure there is no collision
             %row{'Name'} = ('a'...'z').pick(100).join("") unless %row{'Name'}:exists;
