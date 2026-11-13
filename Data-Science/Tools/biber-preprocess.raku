@@ -4,14 +4,17 @@
 
 use Text::CSV:ver<0.022>:auth<zef:Tux>;
 
+# to calculate from e.g. G26b the school year e.g. 9, 10 or 11 , we need the current year
+my $CURRENT_YEAR = Date.today.year;
+
 # fix random seed - however, anonymization is not yet reproducible
 #srand(90210);
 
 my $NA-string = "none";
 
 # Class matcher
-my @class-match = 'G\d\w' => 'GYM',
-                  'F\d\w' => 'FMS',
+my @class-match = 'G\d+\w' => 'GYM',
+                  'F\d+\w' => 'FMS',
                   'Sek' => 'Sek',
                   'Bez' => 'Bez',
                   'Real' => 'Real';
@@ -59,6 +62,7 @@ sub MAIN(Str :$input-dir = "Resultate",
     if $anonymize {
         say "Anonymizing student answers" if $debug;
         @aoh = anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug);
+        die @aoh;
     } else {
         say "Skipping anonymization" if $debug;
     }
@@ -121,8 +125,8 @@ sub anonymize(@aoh, $vornamen-file-f, $vornamen-file-m, $nachnamen-file, $debug)
                 # replace old values with randomized values
                 for @aoh -> %row {
                     my $original_val = %row{$column};
-                    my $randomized_val = %randomized-values-map{$original_val};
-                   %row{$column} =  $randomized_val if %row{$column} ne $NA-string;
+                    my $randomized_val = %randomized-values-map{$original_val} || die "No randomized value found for $original_val in column $column";
+                    %row{$column} =  $randomized_val if %row{$column} ne $NA-string;
                 }
         }
         return @aoh;
@@ -150,6 +154,7 @@ sub read-data($input-dir, $input-csv-sep, $debug) {
                                         $$/;
         
         my ($land, $schule, $jahr) = $match>>.Str;
+        dd $land, $schule, $jahr if $debug; 
 
         my $team-name = $NA-string;
         my @aoh = csv(in => $in-file, headers => "true", sep => $input-csv-sep);
